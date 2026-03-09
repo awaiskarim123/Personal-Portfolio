@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/awais-karim/Projects/Personal-Portfolio/components/motion-client.tsx"],"sourcesContent":["\"use client\";\n\nimport { motion } from \"framer-motion\";\nimport Link from \"next/link\";\n\nexport const MotionSection = motion.section;\nexport const MotionDiv = motion.div;\nexport const MotionP = motion.p;\nexport const MotionLink = motion(Link);\n"],"names":[],"mappings":";;;;;;;;;;AAEA;AACA;AAHA;;;AAKO,MAAM,gBAAgB,oMAAM,CAAC,OAAO;AACpC,MAAM,YAAY,oMAAM,CAAC,GAAG;AAC5B,MAAM,UAAU,oMAAM,CAAC,CAAC;AACxB,MAAM,aAAa,IAAA,oMAAM,EAAC,uKAAI","debugId":null}}]
-}

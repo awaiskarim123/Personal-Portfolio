@@ -5,10 +5,10 @@
   "/page": "/",
   "/blog/page": "/blog",
   "/blog/[slug]/page": "/blog/[slug]",
-  "/about/page": "/about",
   "/contact/page": "/contact",
-  "/system-design/[slug]/page": "/system-design/[slug]",
+  "/about/page": "/about",
   "/projects/[slug]/page": "/projects/[slug]",
+  "/system-design/[slug]/page": "/system-design/[slug]",
   "/projects/page": "/projects",
   "/system-design/page": "/system-design"
 }
