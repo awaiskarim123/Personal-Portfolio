@@ -1,0 +1,38 @@
+---
+title: "JWT Authentication Flow"
+description: "How JWT-based auth works and how to implement it securely."
+publishedAt: "2025-01-18"
+---
+
+JWTs are commonly used for stateless auth. Here's a clear flow and what to watch for.
+
+## Flow
+
+1. **Login** – Client sends credentials (e.g. email + password) to the auth API.
+2. **Validate** – Server checks credentials (e.g. against DB or IdP).
+3. **Issue tokens** – Server creates an **access token** (short-lived, e.g. 15 min) and optionally a **refresh token** (long-lived, stored in DB or a secure cookie).
+4. **Client storage** – Access token is kept in memory or a short-lived cookie. Refresh token in httpOnly cookie or secure storage.
+5. **Requests** – Client sends the access token (e.g. `Authorization: Bearer <token>`).
+6. **Validation** – API verifies signature and expiry; no DB lookup needed for the access token.
+7. **Refresh** – When the access token expires, client calls a refresh endpoint with the refresh token; server returns a new access token (and optionally a new refresh token).
+
+## JWT Structure
+
+- **Header** – algorithm (e.g. RS256, HS256).
+- **Payload** – claims: `sub` (user id), `exp` (expiry), `iat` (issued at). Avoid putting secrets in the payload; it's base64-encoded, not encrypted.
+- **Signature** – so the server can verify the token wasn't tampered with.
+
+## Security Considerations
+
+- Use **short-lived access tokens** so stolen tokens expire quickly.
+- Use **refresh token rotation** and revoke families if reuse is detected.
+- Prefer **RS256** (asymmetric) so only the auth server can sign; APIs verify with the public key.
+- Store refresh tokens in DB (or a dedicated store) so you can revoke them.
+- Prefer **httpOnly cookies** for refresh tokens to reduce XSS exposure.
+
+## Logout
+
+- Client discards the access token.
+- Server invalidates the refresh token (delete from DB or blocklist). Without this, the refresh token remains valid until expiry.
+
+This gives you a scalable, stateless auth layer with clear separation between login (stateful) and API access (stateless).

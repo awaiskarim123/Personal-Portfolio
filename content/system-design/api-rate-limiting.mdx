@@ -1,0 +1,43 @@
+---
+title: "API Rate Limiting"
+description: "Strategies and implementation options for rate limiting your API."
+publishedAt: "2025-01-12"
+---
+
+Rate limiting protects your API from abuse and keeps traffic predictable. Here are common approaches.
+
+## Why Rate Limit?
+
+- Prevent a single client from consuming all capacity.
+- Encourage fair use and allow you to tier by plan.
+- Mitigate some DoS and brute-force attacks.
+
+## Algorithms
+
+**Fixed window** – Count requests per time window (e.g. 100 per minute). Simple but can allow bursts at window boundaries.
+
+**Sliding window** – Count over a rolling window. Fairer but needs more state (e.g. store timestamps or use a weighted average).
+
+**Token bucket** – Refill tokens at a rate; each request consumes one. Allows short bursts up to bucket size.
+
+**Leaky bucket** – Requests are processed at a constant rate. Smooths traffic but can increase latency.
+
+## Implementation with Redis
+
+Use Redis to store counters or token buckets keyed by client (API key, IP, or user id):
+
+- **INCR** + **EXPIRE** for fixed window.
+- **Sorted set** of request timestamps for sliding window (add current time, remove older than window, count).
+- Lua scripts for atomic token-bucket updates.
+
+Example key: `ratelimit:{client_id}:{window}`. Set TTL to the window length so keys expire.
+
+## Response Headers
+
+Return standard headers so clients can back off:
+
+- `X-RateLimit-Limit` – max requests per window
+- `X-RateLimit-Remaining` – remaining in current window
+- `Retry-After` – when to retry (on 429)
+
+Combine rate limiting with auth and monitoring for a solid API.

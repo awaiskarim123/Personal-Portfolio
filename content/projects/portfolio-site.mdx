@@ -1,0 +1,22 @@
+---
+title: "This Portfolio"
+description: "A fast, static personal portfolio built with Next.js 15, TypeScript, and MDX."
+techStack: ["Next.js", "TypeScript", "Tailwind CSS", "MDX", "Framer Motion"]
+githubUrl: "https://github.com"
+liveUrl: "https://example.com"
+featured: true
+publishedAt: "2025-03-01"
+---
+
+## Overview
+
+This site is built with the App Router and static generation. Content lives in MDX files under `content/` for blog, projects, and system design articles—no CMS or admin panel.
+
+## Architecture
+
+- **Next.js 15** – App Router, server components, and static generation.
+- **MDX** – Blog and articles are written in MDX; frontmatter is parsed with gray-matter and body compiled with next-mdx-remote.
+- **Tailwind + Shadcn-style components** – Dark theme by default, minimal layout, large typography.
+- **Framer Motion** – Used in client components for section and list animations.
+
+All pages are generated at build time, so the site is fast and can be deployed on Vercel (or any static host) without a server.

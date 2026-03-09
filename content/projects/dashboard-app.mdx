@@ -1,0 +1,24 @@
+---
+title: "Analytics Dashboard"
+description: "Internal dashboard for viewing metrics and running reports."
+techStack: ["React", "TypeScript", "Chart.js", "Tailwind"]
+liveUrl: "https://example.com/dashboard"
+featured: false
+publishedAt: "2024-09-20"
+---
+
+## Overview
+
+A read-only dashboard for internal teams to view KPIs and run predefined reports. Data is loaded from an existing analytics API.
+
+## Tech Stack
+
+- **React + TypeScript** – SPA with strict typing.
+- **Chart.js** – Line and bar charts for time-series and breakdowns.
+- **Tailwind** – Layout and styling.
+
+## Architecture
+
+- The app talks to a single backend API that aggregates data from the analytics pipeline.
+- Reports are cached for 5 minutes to avoid overloading the data store.
+- Role-based access is enforced by the API; the dashboard only renders what the user is allowed to see.

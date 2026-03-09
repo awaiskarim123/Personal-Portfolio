@@ -1,0 +1,29 @@
+---
+title: "Real-Time Chat Architecture"
+description: "How to design a scalable real-time chat system with WebSockets and message queues."
+publishedAt: "2025-01-10"
+---
+
+Real-time chat requires low latency and reliable delivery. Here's a high-level architecture that scales.
+
+## Components
+
+1. **Clients** – Web or mobile apps that connect via WebSockets (or long polling as fallback).
+2. **WebSocket server** – Maintains persistent connections and pushes messages. Can be scaled horizontally with a sticky session or a shared pub/sub layer.
+3. **Message queue** – e.g. Redis Pub/Sub or Kafka. When a user sends a message, the API publishes it; all servers subscribed to the room forward it to their connected clients.
+4. **API server** – Handles REST/GraphQL for history, auth, and metadata. Writes messages to the queue and optionally to a database for persistence.
+5. **Database** – Stores message history and room/user data. Use read replicas if you need to scale reads.
+
+## Flow
+
+- User A sends a message → API validates and publishes to the queue (e.g. channel `room:123`).
+- All WebSocket servers subscribed to `room:123` receive the message and push to their connected clients (User B, User C, …).
+- Message can also be written to the DB for history.
+
+## Considerations
+
+- **Presence** – Track who's online via a Redis set or similar; broadcast join/leave on the room channel.
+- **History** – On connect, fetch last N messages from the API; optionally use cursor-based pagination.
+- **Scale** – Add more WebSocket servers behind a load balancer; they share state only via the message queue and Redis.
+
+This pattern keeps the system simple and scalable for most chat use cases.

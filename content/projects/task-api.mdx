@@ -1,0 +1,25 @@
+---
+title: "Task API"
+description: "REST API for a task management app with auth and real-time updates."
+techStack: ["Node.js", "Express", "PostgreSQL", "Redis", "JWT"]
+githubUrl: "https://github.com"
+featured: true
+publishedAt: "2024-11-15"
+---
+
+## Overview
+
+A REST API that powers a task management frontend. Supports CRUD for tasks and lists, JWT auth, and optional real-time updates via WebSockets.
+
+## Tech Stack
+
+- **Node.js + Express** – API server and WebSocket server.
+- **PostgreSQL** – Tasks, lists, and users.
+- **Redis** – Session cache and pub/sub for real-time events.
+- **JWT** – Access and refresh tokens for authentication.
+
+## Architecture
+
+- Auth middleware validates the JWT and attaches the user to the request.
+- Rate limiting is applied per client using Redis (sliding window).
+- WebSocket server subscribes to Redis channels to broadcast updates to connected clients when tasks change.

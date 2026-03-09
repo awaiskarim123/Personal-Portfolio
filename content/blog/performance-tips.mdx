@@ -1,0 +1,26 @@
+---
+title: "Web Performance Tips That Actually Work"
+description: "Practical steps to make your web app feel faster."
+publishedAt: "2025-02-01"
+tags: ["performance", "frontend", "web"]
+---
+
+Performance is a feature. Here are a few changes that tend to move the needle.
+
+## 1. Optimize Images
+
+Use the right format (WebP/AVIF when supported) and size. Next.js `Image` does a lot of this for you: lazy loading, responsive `srcset`, and placeholders.
+
+## 2. Reduce JavaScript
+
+Ship less JS. Prefer server components so that only interactive parts load on the client. Code-split routes and heavy libraries.
+
+## 3. Cache Wisely
+
+Set cache headers for static assets. Use `stale-while-revalidate` for data that can be a bit stale. For static sites, SSG gives you a fast first load.
+
+## 4. Measure
+
+Use Core Web Vitals (LCP, FID, CLS) and real-user metrics. Optimize what you measure; otherwise you're guessing.
+
+Start with one of these and measure again.

@@ -1,0 +1,38 @@
+---
+title: "Redis Caching Strategy"
+description: "Patterns for using Redis as a cache layer in backend systems."
+publishedAt: "2025-01-14"
+---
+
+Redis is often used as a cache in front of a database or external API. A few patterns make it effective.
+
+## Cache-Aside (Lazy Loading)
+
+1. App reads from Redis.
+2. On miss, read from DB (or API), then write to Redis.
+3. App returns the value.
+
+**Pros:** Only popular data gets cached. **Cons:** First request per key is slow; you can get thundering herd if many requests miss at once (use a lock or single-flight).
+
+## TTL and Invalidation
+
+- Set a TTL on every key so stale data eventually disappears. e.g. `SET key value EX 3600`.
+- For invalidation: delete the key when the source data changes, or use a short TTL and accept eventual consistency.
+
+## Key Design
+
+- Use a clear namespace: `app:entity:id` e.g. `blog:post:123`.
+- Keep keys small but unique. Hash long IDs if needed.
+- Avoid huge values; split into smaller chunks if necessary.
+
+## Connection and Pooling
+
+Use a connection pool so you don't open a new connection per request. Most Redis clients support pooling. Run Redis close to the app to reduce latency.
+
+## When Not to Cache
+
+- Data that changes very frequently and is read rarely.
+- Data that must always be fresh (use short TTL or no cache).
+- Very large objects that evict more useful entries.
+
+Start with cache-aside, set TTLs, and add invalidation where you need stronger consistency.
