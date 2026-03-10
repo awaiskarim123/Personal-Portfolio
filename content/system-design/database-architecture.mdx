@@ -1,0 +1,129 @@
+---
+title: "Database Architecture"
+description: "Designing database architecture: schema design, replication, indexing, and scaling strategies for production systems."
+publishedAt: "2025-03-09"
+---
+
+A clear database architecture keeps applications fast, maintainable, and scalable. This article covers schema design, when to choose which store, replication, indexing, and when to shard.
+
+## 1. Data modeling and schema design
+
+### Normalization vs denormalization
+
+- **Normalized (3NF)** – One place for each fact. Reduces redundancy and update anomalies; joins are required for reads. Best when writes are frequent and consistency is critical (e.g. user profile, inventory).
+- **Denormalized** – Duplicate data across tables or documents to optimize reads. Fewer joins or single-document reads; harder to keep in sync. Best when reads dominate and you can accept eventual consistency or controlled redundancy (e.g. activity feeds, dashboards).
+
+Use normalization by default; denormalize only where you have a proven read hotspot and a clear strategy for keeping duplicated data updated (e.g. via events, triggers, or application logic).
+
+### Entity design
+
+- **Core entities** – Users, tenants, products, orders, etc. Identify primary keys (surrogate IDs vs natural keys) and invariants (e.g. “order total must equal sum of line items”).
+- **Relationships** – One-to-many, many-to-many. Use foreign keys in relational DBs; in document stores, embed when the child lifecycle is tied to the parent and you always load together; reference by ID when the child is shared or large.
+- **Audit and soft deletes** – `created_at`, `updated_at`, `deleted_at` (or an `is_deleted` flag) so you can reason about history and support undo/restore.
+
+### Example: e‑commerce core
+
+- **users** – id, email, name, created_at, updated_at  
+- **products** – id, sku, name, price, stock, created_at, updated_at  
+- **orders** – id, user_id, status, total, created_at  
+- **order_items** – id, order_id, product_id, quantity, unit_price  
+
+Orders and order_items are normalized; product name/price can be copied into order_items at order time (denormalization for history and read simplicity).
+
+---
+
+## 2. Choosing the right store
+
+| Need | Good fit | Example |
+|------|----------|--------|
+| Strong consistency, relations, transactions | Relational (PostgreSQL, MySQL) | Orders, accounts, inventory |
+| Flexible schema, document-centric reads | Document (MongoDB, DynamoDB document API) | Catalogs, user-generated content |
+| Key-value, cache, session, simple structures | Key-value / cache (Redis, DynamoDB) | Sessions, rate limits, feature flags |
+| Full-text search | Search engine (Elasticsearch, OpenSearch) | Logs, product search |
+| Time-series, high write throughput | Time-series (TimescaleDB, InfluxDB) | Metrics, events |
+
+**Polyglot persistence** – Use one primary store (often relational) for source of truth and add others for specific needs (Redis for cache/sessions, Elasticsearch for search). Keep the system understandable; avoid adding stores without a clear reason.
+
+---
+
+## 3. Indexing strategy
+
+- **Primary key** – Clustered in many engines; choose a stable, compact key (e.g. bigint auto-increment or UUID v7) to avoid random writes and table fragmentation.
+- **Secondary indexes** – Add for query predicates and sort columns. Composite indexes match left-prefixes of (a, b, c); order columns to match your most common queries.
+- **Covering index** – Include all columns needed by the query so the engine doesn’t touch the base table (index-only scan).
+- **Cost** – Indexes speed reads but slow writes and take space. Remove unused indexes; monitor slow queries and add indexes only where they fix real bottlenecks.
+
+### Example (PostgreSQL)
+
+- Query: “Active orders for user X, newest first.”  
+- Index: `CREATE INDEX idx_orders_user_created ON orders (user_id, created_at DESC) WHERE status NOT IN ('cancelled', 'refunded');`  
+- Partial index keeps the index small and matches the “active” filter.
+
+---
+
+## 4. Replication and read scaling
+
+- **Primary–replica (single primary)** – All writes go to the primary; replicas replicate asynchronously and serve reads. Simple and common; read replica lag means eventually consistent reads.
+- **Replica use cases** – Read-heavy reporting, dashboards, search indexing. Route low-latency user-facing reads to primary or “fresh” replicas; route analytics to lagging replicas if acceptable.
+- **Failover** – Automated failover (e.g. Patroni, RDS Multi-AZ) promotes a replica to primary. Application reconnects to the new primary; some writes may be lost if replication was asynchronous (acceptable RPO/RTO depend on the product).
+
+---
+
+## 5. Sharding and partitioning
+
+- **When to shard** – When a single primary (plus replicas) can’t handle write throughput or dataset size, or when regulatory/data residency requires splitting data.
+- **Shard key** – Choose a key that distributes load (e.g. user_id, tenant_id) and aligns with query patterns so most queries hit one shard. Avoid keys that cause hot shards (e.g. “status” for “pending”).
+- **Vertical vs horizontal** – Vertical: bigger instance. Horizontal: more instances (sharding). Prefer vertical first; shard when you hit limits.
+- **Application impact** – Cross-shard queries (e.g. “all orders across users”) are expensive; avoid or handle via separate analytics DB or materialized views.
+
+### Table partitioning (single DB)
+
+- Partition large tables by range or list (e.g. by `created_at` month or by `region`). Improves maintenance (drop old partitions, partition pruning) and can improve query plans. Use in addition to or instead of sharding when the dataset is large but fits one DB.
+
+---
+
+## 6. Consistency and transactions
+
+- **ACID** – Use transactions for multi-step writes that must succeed or fail together (e.g. debit one account, credit another). Keep transactions short and avoid long-running locks.
+- **Isolation levels** – Default (e.g. Read Committed) is usually enough; use Serializable or Repeatable Read only when you have a clear correctness need and understand lock/contention impact.
+- **Eventual consistency** – Acceptable for caches, read replicas, and denormalized views when you design for it (e.g. retries, idempotency, and clear “source of truth” ownership).
+
+---
+
+## 7. Backups and recovery
+
+- **Point-in-time recovery (PITR)** – WAL (or equivalent) plus base backups so you can restore to any moment. Essential for production.
+- **Backup strategy** – Regular full backups plus continuous WAL archiving; test restore and document RTO/RPO. Offload backups to object storage and replicate across regions if required.
+- **Logical backups** – pg_dump, mysqldump for portability and selective restore; supplement rather than replace WAL-based PITR for critical systems.
+
+---
+
+## 8. High-level architecture sketch
+
+```
+                    ┌─────────────────┐
+                    │   Application   │
+                    └────────┬────────┘
+                             │
+         ┌──────────────────┼──────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+  │   Primary   │    │   Redis     │    │  Search     │
+  │ (PostgreSQL)│    │  (cache /   │    │(Elasticsearch)│
+  │             │    │   session)  │    │             │
+  └──────┬──────┘    └─────────────┘    └─────────────┘
+         │
+         │ replication
+         ▼
+  ┌─────────────┐
+  │  Replicas   │  ← read scaling, reporting
+  └─────────────┘
+```
+
+- **Primary** – Source of truth; all writes; transactions and strong consistency.
+- **Replicas** – Read scaling and failover; eventually consistent reads.
+- **Redis** – Cache, sessions, rate limits; optional persistence.
+- **Search** – Index built from primary or events; eventually consistent.
+
+Start with a single primary plus replicas and one cache/store; add search and sharding only when justified by load and product requirements.
